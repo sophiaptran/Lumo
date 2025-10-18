@@ -1,5 +1,4 @@
 "use client";
-import React from "react";
 import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 import ShaderAnimationComponent from "./shader-anim.tsx";
 
@@ -18,10 +17,7 @@ export function HeroScrollDemo() {
           </>
         }
       >
-        <div
-          className="mx-auto rounded-2xl object-cover h-full object-left-top">
         <ShaderAnimationComponent />
-        </div>
       </ContainerScroll>
     </div>
   );
