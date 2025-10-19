@@ -21,6 +21,9 @@ import LoginSuccess from './pages/LoginSuccess.tsx'
 import PlanetBadgesPage from './pages/PlanetBadgesPage.tsx'
 import StreaksPage from './pages/StreaksPage.tsx'
 import DashboardLayout from './components/DashboardLayout.tsx'
+import VideoMap from './pages/Map.tsx'
+
+
 
 // Home component that contains the main content
 // HomePage no longer used; logged-in Home is default
@@ -44,6 +47,7 @@ createRoot(document.getElementById('root')!).render(
         </Routes>
       </Router>
     </SessionProvider>
+    {/* <VideoMap /> */}
   </StrictMode>
 )
 
