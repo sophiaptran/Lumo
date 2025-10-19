@@ -15,11 +15,36 @@ function capitalize(word: string) {
   return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
 }
 
+function standardizeCategoryName(name?: string): string | undefined {
+  if (!name) return undefined
+  const n = String(name).toLowerCase()
+  if (n === 'other' || n === 'misc' || n === 'uncategorized') return undefined
+  if (/(grocery|grocer|supermarket)/.test(n)) return 'Groceries'
+  if (/(restaurant|dining|food|cafe|coffee|starbucks)/.test(n)) return 'Dining'
+  if (/(shopping|retail|store|walmart|target|amazon)/.test(n)) return 'Shopping'
+  if (/(uber|lyft|airline|flight|hotel|travel|taxi)/.test(n)) return 'Travel'
+  if (/(movie|cinema|netflix|spotify|entertain)/.test(n)) return 'Entertainment'
+  if (/(bill|electric|water|gas|utility|utilities|internet)/.test(n)) return 'Utilities'
+  if (/(fuel|gas station|parking|toll|transport)/.test(n)) return 'Transportation'
+  if (/(pharmacy|health|doctor|hospital|medical)/.test(n)) return 'Health'
+  if (/(rent|mortgage)/.test(n)) return 'Bills'
+  return name.charAt(0).toUpperCase() + name.slice(1)
+}
+
+function chooseCategory(raw?: string, description?: string, merchantName?: string): string {
+  return (
+    standardizeCategoryName(raw) ||
+    standardizeCategoryName(description) ||
+    standardizeCategoryName(merchantName) ||
+    'Shopping'
+  )
+}
+
 export default function Dashboard() {
   const [fullName, setFullName] = useState<string>('')
   const { session } = useSession()
   const currencyFmt = useMemo(() => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }), [])
-  const allowedCategories = useMemo(() => new Set(['Food', 'Travel', 'Entertainment', 'Bills', 'Groceries', 'Dining', 'Shopping', 'Utilities']), [])
+  // Categories are normalized per-purchase; we no longer collapse to "Other".
   const [customerId, setCustomerId] = useState<string>('')
   const [accounts, setAccounts] = useState<NessieAccount[]>([])
   const [purchases, setPurchases] = useState<NessiePurchase[]>([])
@@ -66,14 +91,17 @@ export default function Dashboard() {
         const enriched: NessiePurchase[] = []
         for (const p of allPurchases) {
           let category = p.category
+          let merchantName: string | undefined
           if (!category && (p as any).merchant_id) {
             try {
               const m = await getMerchant(String((p as any).merchant_id))
               const cats = Array.isArray(m?.category) ? m.category : (typeof m?.category === 'string' ? [m.category] : [])
-              category = cats[0] || 'Other'
+              category = cats[0]
+              merchantName = m?.name
             } catch {}
           }
-          enriched.push({ ...p, category: category || 'Other' })
+          const finalCat = chooseCategory(category, (p as any)?.description, merchantName)
+          enriched.push({ ...p, category: finalCat })
         }
         setPurchases(enriched)
         try {
@@ -89,19 +117,17 @@ export default function Dashboard() {
   const pieData = useMemo(() => {
     const totals = new Map<string, number>()
     for (const p of purchases) {
-      const raw = (p.category || 'Other') as string
-      const key = allowedCategories.has(raw) ? raw : 'Other'
+      const key = (p.category as string) || chooseCategory(undefined, (p as any)?.description)
       totals.set(key, (totals.get(key) || 0) + (p.amount || 0))
     }
     return Array.from(totals.entries()).map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
-  }, [purchases, allowedCategories])
+  }, [purchases])
 
   const categorySummary = useMemo(() => {
     const total = purchases.reduce((s, p) => s + (p.amount || 0), 0)
     const byCat = new Map<string, number>()
     for (const p of purchases) {
-      const raw = (p.category || 'Other') as string
-      const key = allowedCategories.has(raw) ? raw : 'Other'
+      const key = (p.category as string) || chooseCategory(undefined, (p as any)?.description)
       byCat.set(key, (byCat.get(key) || 0) + (p.amount || 0))
     }
     const list = Array.from(byCat.entries()).map(([name, value]) => ({
@@ -111,7 +137,7 @@ export default function Dashboard() {
     }))
     list.sort((a, b) => b.value - a.value)
     return { total: Number(total.toFixed(2)), list }
-  }, [purchases, allowedCategories])
+  }, [purchases])
 
   const monthlyData = useMemo(() => {
     const byMonth = new Map<string, number>()
@@ -128,6 +154,22 @@ export default function Dashboard() {
   const totalBalance = useMemo(() => {
     return accounts.reduce((sum, a) => sum + (a.balance || 0), 0)
   }, [accounts])
+
+  const wantsNeedsData = useMemo(() => {
+    let needs = 0
+    let wants = 0
+    for (const p of purchases) {
+      const amt = p.amount || 0
+      const cat = (p.category as string) || chooseCategory(undefined, (p as any)?.description)
+      const isNeed = ['Groceries','Utilities','Bills','Transportation','Health'].includes(cat)
+      if (isNeed) needs += amt
+      else wants += amt
+    }
+    return [
+      { name: 'Needs', value: Number(needs.toFixed(2)) },
+      { name: 'Wants', value: Number(wants.toFixed(2)) },
+    ]
+  }, [purchases])
 
   const recentPurchases = useMemo(() => {
     return [...purchases]
@@ -203,7 +245,7 @@ export default function Dashboard() {
           )}
           <BentoGrid>
             <GlowingBentoItem
-              className="md:col-span-4 md:row-span-2"
+              className="md:col-span-6"
               gradientFrom="from-slate-800/60"
               gradientTo="to-slate-700/60"
             >
@@ -228,20 +270,32 @@ export default function Dashboard() {
             </GlowingBentoItem>
 
             <GlowingBentoItem
-              className="md:col-span-2 md:row-span-2"
+              className="md:col-span-3"
+              gradientFrom="from-slate-800/60"
+              gradientTo="to-slate-700/60"
+            >
+              <div className="text-white">
+                <h2 className="text-lg font-semibold mb-1 opacity-80">This Month</h2>
+                <p className="text-3xl font-bold text-white">{currencyFmt.format(currentMonthTotal)}</p>
+                <p className="text-xs opacity-40 mt-1">Total purchases</p>
+              </div>
+            </GlowingBentoItem>
+
+            <GlowingBentoItem
+              className="md:col-span-6"
               gradientFrom="from-slate-800/60"
               gradientTo="to-slate-700/60"
             >
               <div className="text-white h-full flex flex-col justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold mb-1 opacity-80">Accounts</h2>
+                  <h2 className="text-lg font-semibold mb-1 opacity-80">Checking Balance</h2>
                   <p className="text-4xl font-bold text-white">{currencyFmt.format(totalBalance)}</p>
                 </div>
                 <div className="text-sm opacity-80 space-y-1">
                   {accounts.slice(0, 4).map((a) => (
                     <div key={a._id} className="flex justify-between">
-                      <span>{a.nickname || a.type || 'Account'}</span>
-                      <span>{currencyFmt.format(Number(a.balance || 0))}</span>
+                      <span className="truncate">{a.nickname || a.type || 'Account'}</span>
+                      <span className="whitespace-nowrap">{currencyFmt.format(Number(a.balance || 0))}</span>
                     </div>
                   ))}
                 </div>
@@ -249,7 +303,7 @@ export default function Dashboard() {
             </GlowingBentoItem>
 
             <GlowingBentoItem
-              className="md:col-span-3"
+              className="md:col-span-6"
               gradientFrom="from-slate-800/40"
               gradientTo="to-slate-800/40"
             >
@@ -285,7 +339,21 @@ export default function Dashboard() {
             </GlowingBentoItem>
 
             <GlowingBentoItem
-              className="md:col-span-2"
+              className="md:col-span-3"
+              gradientFrom="from-slate-800/40"
+              gradientTo="to-slate-800/40"
+            >
+              <div className="p-4 sm:p-0 flex flex-col gap-6">
+                <PieCharts
+                  data={wantsNeedsData}
+                  colors={colors}
+                  title="Wants vs Needs"
+                />
+              </div>
+            </GlowingBentoItem>
+
+            <GlowingBentoItem
+              className="md:col-span-4"
               gradientFrom="from-slate-800/60"
               gradientTo="to-slate-700/60"
             >
@@ -300,21 +368,11 @@ export default function Dashboard() {
               </div>
             </GlowingBentoItem>
 
-            <GlowingBentoItem
-              className="md:col-span-2"
-              gradientFrom="from-slate-800/60"
-              gradientTo="to-slate-700/60"
-            >
-              <div className="text-white">
-                <h2 className="text-lg font-semibold mb-1 opacity-80">This Month</h2>
-                <p className="text-3xl font-bold text-white">{currencyFmt.format(currentMonthTotal)}</p>
-                <p className="text-xs opacity-40 mt-1">Total purchases</p>
-              </div>
-            </GlowingBentoItem>
+            
 
             {rewardsTotal > 0 && (
               <GlowingBentoItem
-                className="md:col-span-2"
+                className="md:col-span-4"
                 gradientFrom="from-slate-800/60"
                 gradientTo="to-slate-700/60"
               >
@@ -367,13 +425,16 @@ function GlowingBentoItem({
 }
 
 
-// Removed demo constants
-
 const colors = {
-  Food: '#8B5CF6',
   Travel: '#3B82F6',
   Entertainment: '#14B8A6',
   Bills: '#22D3EE',
+  Groceries: '#F59E0B',
+  Dining: '#10B981',
+  Shopping: '#EF4444',
+  Utilities: '#6366F1',
+  Transportation: '#F97316',
+  Health: '#84CC16',
 }
 
 
