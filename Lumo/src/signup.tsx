@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import bcrypt from 'bcryptjs'
 import { useNavigate } from "react-router-dom";
 import supabase from "@/assets/supabase-client";
 import { createCustomer } from "@/lib/nessie";
@@ -108,9 +109,12 @@ function SignUpPage() {
         }
       }
 
+      const salt = bcrypt.genSaltSync(10)
+      const passwordHash = bcrypt.hashSync(password, salt)
+
       const { error: dbError } = await supabase
         .from('userLogin')
-        .insert({ email: normalizedEmail, password, first_name: firstName, last_name: lastName, nessie_customer_id: nessieIdToSave || null });
+        .insert({ email: normalizedEmail, password: passwordHash, first_name: firstName, last_name: lastName, nessie_customer_id: nessieIdToSave || null });
       if (dbError) {
         setError(dbError.message);
       } else {

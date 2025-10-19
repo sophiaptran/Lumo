@@ -1,5 +1,6 @@
 import { SignInPage } from "@/components/ui/sign-in";
 import supabase from "@/assets/supabase-client";
+import bcrypt from 'bcryptjs'
 import { useNavigate } from "react-router-dom";
 import React from "react";
 import { useSession } from "./session";
@@ -32,13 +33,18 @@ const SignInPageDemo = () => {
 
     const { data, error } = await supabase
       .from('userLogin')
-      .select('id, nessie_customer_id')
+      .select('id, nessie_customer_id, password')
       .eq('email', email)
-      .eq('password', password)
       .limit(1)
       .single();
 
     if (error || !data) {
+      setFormError('Invalid email or password');
+      return;
+    }
+
+    const isValid = bcrypt.compareSync(password, (data as any).password || '')
+    if (!isValid) {
       setFormError('Invalid email or password');
       return;
     }
