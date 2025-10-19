@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
+// @ts-ignore: Leaflet types may be missing; fallback to any.
+type LeafletMouseEvent = any
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { createCustomer, createMerchant, createAccount, createPurchase, getMerchantsNearby, getCustomers, getAccountPurchases } from '@/lib/nessie'
+import { createCustomer, createMerchant, createAccount, createPurchase, getMerchantsNearby, getCustomers, getAccountPurchases, getCustomerAccounts, deleteCustomer, deleteAccount } from '@/lib/nessie'
 
 export default function Admin() {
   const [log, setLog] = useState<string>('')
@@ -13,6 +16,51 @@ export default function Admin() {
       <h1 className="text-2xl font-semibold mb-6">Admin / Staff</h1>
 
       <div className="grid md:grid-cols-2 gap-6">
+        <section className="rounded-xl border border-red-500/30 p-4 bg-red-900/10 md:col-span-2">
+          <h2 className="font-medium mb-2 text-red-300">Danger Zone</h2>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <button
+              className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-md"
+              onClick={async ()=>{
+                if (!confirm('Delete ALL accounts for ALL customers? This cannot be undone.')) return
+                try {
+                  const customers = await getCustomers()
+                  let count = 0
+                  for (const c of (Array.isArray(customers)? customers: [])) {
+                    if (!c?._id) continue
+                    try {
+                      const accs = await getCustomerAccounts(String(c._id))
+                      for (const a of (Array.isArray(accs)? accs: [])) {
+                        try { await deleteAccount(String(a._id)); count++ } catch {}
+                      }
+                    } catch {}
+                  }
+                  append(`Deleted ${count} accounts across all customers`)
+                } catch (e:any) {
+                  append(`Error deleting accounts: ${e?.message||e}`)
+                }
+              }}
+            >Delete All Accounts</button>
+
+            <button
+              className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-md"
+              onClick={async ()=>{
+                if (!confirm('Delete ALL customers (and their accounts/bills/purchases as per API behavior)? This cannot be undone.')) return
+                try {
+                  const customers = await getCustomers()
+                  let count = 0
+                  for (const c of (Array.isArray(customers)? customers: [])) {
+                    if (!c?._id) continue
+                    try { await deleteCustomer(String(c._id)); count++ } catch {}
+                  }
+                  append(`Deleted ${count} customers`)
+                } catch (e:any) {
+                  append(`Error deleting customers: ${e?.message||e}`)
+                }
+              }}
+            >Delete All Customers</button>
+          </div>
+        </section>
         <section className="rounded-xl border border-white/10 p-4 bg-white/5">
           <h2 className="font-medium mb-2">Create Customer</h2>
           <form onSubmit={async (e) => {
@@ -131,6 +179,51 @@ export default function Admin() {
             }}
           >Refresh</button>
           <ul id="customers-list" className="max-h-64 overflow-auto text-sm space-y-1"></ul>
+        </section>
+
+        <section className="rounded-xl border border-white/10 p-4 bg-white/5 md:col-span-2">
+          <h2 className="font-medium mb-2">All Accounts</h2>
+          <div className="flex gap-2 mb-3 text-sm">
+            <button
+              className="bg-white text-black px-4 py-2 rounded-md"
+              onClick={async ()=>{
+                const container = document.getElementById('accounts-list')
+                if (container) container.innerHTML = ''
+                try {
+                  const customers = await getCustomers()
+                  for (const c of (Array.isArray(customers)? customers: [])) {
+                    if (!c?._id) continue
+                    const header = document.createElement('div')
+                    header.className = 'mt-3 mb-1 text-white/70 text-sm'
+                    header.textContent = `${c.first_name||''} ${c.last_name||''} — ${c._id}`
+                    container?.appendChild(header)
+                    try {
+                      const accs = await getCustomerAccounts(String(c._id))
+                      ;(Array.isArray(accs)? accs: []).forEach((a:any)=>{
+                        const row = document.createElement('div')
+                        row.className = 'flex justify-between gap-2 border-b border-white/10 pb-1 text-sm'
+                        row.innerHTML = `<span class=\"truncate\">${a.nickname||a.type||'Account'}</span><span class=\"text-white/50\">$${Number(a.balance||0).toFixed(2)}</span><span class=\"text-white/40 font-mono text-[10px]\">${a._id||''}</span>`
+                        container?.appendChild(row)
+                      })
+                    } catch {}
+                  }
+                  append('Loaded all accounts.')
+                } catch (e:any) {
+                  append(`Error loading accounts: ${e?.message||e}`)
+                }
+              }}
+            >Refresh</button>
+            <input id="accounts-filter" placeholder="Filter by nickname/type" className="flex-1 bg-transparent border border-white/10 rounded-md p-2" onInput={(e: FormEvent<HTMLInputElement>)=>{
+              const q = (e.currentTarget as HTMLInputElement).value.toLowerCase()
+              const container = document.getElementById('accounts-list')
+              if (!container) return
+              Array.from(container.children).forEach((el)=>{
+                const text = (el as HTMLElement).innerText.toLowerCase()
+                ;(el as HTMLElement).style.display = text.includes(q) ? '' : 'none'
+              })
+            }} />
+          </div>
+          <div id="accounts-list" className="max-h-64 overflow-auto space-y-1"></div>
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 bg-white/5">
@@ -274,9 +367,11 @@ function MapPicker() {
   const [nearby, setNearby] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const AnyMapContainer = MapContainer as unknown as any
+  const AnyCircleMarker = CircleMarker as unknown as any
   function LocationMarker() {
     useMapEvents({
-      click(e) {
+      click(e: LeafletMouseEvent) {
         const { lat, lng } = e.latlng
         setPosition([lat, lng])
         const latEl = document.getElementById('map-lat') as HTMLInputElement | null
@@ -298,16 +393,16 @@ function MapPicker() {
           .finally(() => setSearching(false))
       },
     })
-    return <CircleMarker center={position} radius={8} pathOptions={{ color: '#fff' }} />
+    return <AnyCircleMarker center={position} radius={8} pathOptions={{ color: '#fff' }} />
   }
 
   return (
     <>
       <div className="h-64 rounded-md overflow-hidden border border-white/10">
-        <MapContainer center={position} zoom={12} style={{ height: '100%', width: '100%' }}>
+        <AnyMapContainer center={position} zoom={12} style={{ height: '100%', width: '100%' }}>
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <LocationMarker />
-        </MapContainer>
+        </AnyMapContainer>
       </div>
       <div className="mt-2 text-xs">
         <p className="text-white/70 mb-1">Nearby merchants (rad 5mi):</p>

@@ -174,11 +174,7 @@ export default function Dashboard() {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-12 gap-6 pt-6 pb-12 px-6">
-        <div className="col-span-12 md:col-span-3 lg:col-span-2">
-          <Sidebar />
-        </div>
-
-        <div className="col-span-12 md:col-span-9 lg:col-span-10">
+        <div className="col-span-12">
           {!customerId && (
             <div className="mb-6 p-4 border border-white/10 rounded-xl bg-white/5">
               <p className="text-white/80 mb-3">Enter your Nessie customerId to load your data.</p>
@@ -330,6 +326,7 @@ export default function Dashboard() {
               </GlowingBentoItem>
             )}
           </BentoGrid>
+        </div>
       </div>
     </div>
   )
@@ -341,7 +338,6 @@ function GlowingBentoItem({
   className,
   gradientFrom,
   gradientTo,
-  ...props
 }: {
   children: ReactNode
   className?: string
@@ -353,7 +349,6 @@ function GlowingBentoItem({
       className={cn(className, 'relative')}
       gradientFrom={gradientFrom}
       gradientTo={gradientTo}
-      {...props as any}
     >
       <GlowingEffect
         spread={40}
@@ -372,21 +367,7 @@ function GlowingBentoItem({
 }
 
 
-const spendingData = [
-  { name: 'Food', value: 400 },
-  { name: 'Travel', value: 150 },
-  { name: 'Entertainment', value: 100 },
-  { name: 'Bills', value: 250 },
-]
-
-const monthlySpendingData = [
-  { month: 'Jan', amount: 850 },
-  { month: 'Feb', amount: 920 },
-  { month: 'Mar', amount: 780 },
-  { month: 'Apr', amount: 900 },
-  { month: 'May', amount: 1100 },
-  { month: 'Jun', amount: 950 },
-]
+// Removed demo constants
 
 const colors = {
   Food: '#8B5CF6',

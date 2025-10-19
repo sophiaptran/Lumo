@@ -1,12 +1,10 @@
-const BASE_URL = 'https://api.nessieisreal.com'
 const API_KEY = '604f5835f357a58e1d4605c970e2be39'
 
-async function nessieRequest(method: 'GET' | 'POST', path: string, body?: any): Promise<any> {
+async function nessieRequest(method: 'GET' | 'POST' | 'DELETE', path: string, body?: any): Promise<any> {
   const hasQuery = path.includes('?')
   const sep = hasQuery ? '&' : '?'
   const urls = [
     `/nessie${path}${sep}key=${API_KEY}`,
-    `${BASE_URL}${path}${sep}key=${API_KEY}`,
   ]
   let lastErr: any = null
   for (const url of urls) {
@@ -14,7 +12,7 @@ async function nessieRequest(method: 'GET' | 'POST', path: string, body?: any): 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: body ? JSON.stringify(body) : undefined,
+        body: method === 'GET' || method === 'DELETE' ? undefined : (body ? JSON.stringify(body) : undefined),
         mode: 'cors',
       })
       if (!res.ok) {
@@ -57,7 +55,15 @@ export async function getCustomers(): Promise<any[]> {
 }
 
 export async function deleteCustomer(id: string): Promise<void> {
-  await nessieRequest('POST', `/customers/${id}/delete`) // Nessie lacks DELETE in some demos; fallback endpoint pattern
+  // Try legacy POST delete first (commonly supported in sandbox), then DELETE
+  try { await nessieRequest('POST', `/customers/${id}/delete`); return } catch {}
+  await nessieRequest('DELETE', `/customers/${id}`)
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  // Try legacy POST delete first, then DELETE
+  try { await nessieRequest('POST', `/accounts/${id}/delete`); return } catch {}
+  await nessieRequest('DELETE', `/accounts/${id}`)
 }
 
 export type NessieAccount = {
