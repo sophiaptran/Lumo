@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Lock } from 'lucide-react';
 import { BackgroundBeams } from '@/components/ui/background-beams';
 import PlanetCanvas from '@/components/ui/PlanetCanvas';
+import { useSession } from '@/session'
+import { getCustomerAccounts, getAccountPurchases, type NessiePurchase } from '@/lib/nessie'
 
 interface PlanetBadge {
   id: string;
@@ -226,41 +228,87 @@ const PLANET_BADGES: PlanetBadge[] = [
 
 const PlanetBadgesPage: React.FC = () => {
   const [badges, setBadges] = useState<PlanetBadge[]>(PLANET_BADGES);
-  const [currentStreak, setCurrentStreak] = useState(89);
+  const [currentStreak, setCurrentStreak] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlanet, setSelectedPlanet] = useState<PlanetBadge | null>(null);
+  const { session } = useSession()
+  const userKey = useMemo(() => session?.email || localStorage.getItem('userEmail') || 'anon', [session?.email])
+
+  const needsCategories = useMemo(() => new Set([
+    'Groceries','Wholesale','Utilities','Bills','Transportation','Health','Insurance','Education','Phone'
+  ]), [])
+
+  function normalizeCategory(name?: string): string | undefined {
+    if (!name) return undefined
+    const n = String(name).toLowerCase()
+    if (/(grocery|grocer|supermarket)/.test(n)) return 'Groceries'
+    if (/(wholesale|costco|sam's club|sams club|bj's|bjs)/.test(n)) return 'Wholesale'
+    if (/(restaurant|dining|food|cafe|coffee)/.test(n)) return 'Dining'
+    if (/(shopping|retail|store|walmart|target|amazon)/.test(n)) return 'Shopping'
+    if (/(uber|lyft|airline|flight|hotel|travel|taxi)/.test(n)) return 'Travel'
+    if (/(movie|cinema|netflix|spotify|entertain)/.test(n)) return 'Entertainment'
+    if (/(bill|electric|water|gas|utility|utilities|internet)/.test(n)) return 'Utilities'
+    if (/(fuel|gas station|parking|toll|transport)/.test(n)) return 'Transportation'
+    if (/(pharmacy|health|doctor|hospital|medical)/.test(n)) return 'Health'
+    if (/(rent|mortgage)/.test(n)) return 'Bills'
+    return name.charAt(0).toUpperCase() + name.slice(1)
+  }
 
   useEffect(() => {
-    // Load streak data and update badge status
-    const savedData = localStorage.getItem('streakData');
-    if (savedData) {
-      const parsed = JSON.parse(savedData);
-      setCurrentStreak(parsed.currentStreak);
-      
-      // Update badge unlock status based on streak
-      setBadges(prevBadges => 
-        prevBadges.map((badge) => ({
-          ...badge,
-          unlocked: badge.requiredStreak <= parsed.currentStreak,
-          unlockedDate: badge.requiredStreak <= parsed.currentStreak && !badge.unlockedDate 
-            ? new Date().toISOString() 
-            : badge.unlockedDate
-        }))
-      );
-    } else {
-      // If no saved data, use the current streak to determine unlocks
-      setBadges(prevBadges => 
-        prevBadges.map((badge) => ({
-          ...badge,
-          unlocked: badge.requiredStreak <= currentStreak,
-          unlockedDate: badge.requiredStreak <= currentStreak && !badge.unlockedDate 
-            ? new Date().toISOString() 
-            : badge.unlockedDate
-        }))
-      );
-    }
-    setIsLoading(false);
-  }, []);
+    ;(async () => {
+      try {
+        const savedArr = JSON.parse(localStorage.getItem(`roundupSavedDates:${userKey}`) || '[]') as string[]
+        const savedDates = new Set(savedArr)
+        const customerId = localStorage.getItem('nessieCustomerId') || ''
+        let wantsByDay = new Map<string, number>()
+        if (customerId) {
+          try {
+            const accs = await getCustomerAccounts(customerId)
+            const today = new Date()
+            const currentMonth = today.getMonth()
+            const currentYear = today.getFullYear()
+            for (const a of accs) {
+              try {
+                const ps: NessiePurchase[] = await getAccountPurchases(a._id)
+                for (const p of ps) {
+                  if (!p.purchase_date) continue
+                  const d = new Date(p.purchase_date)
+                  if (d.getFullYear() !== currentYear || d.getMonth() !== currentMonth) continue
+                  const key = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                  const cat = (p.category as string) || normalizeCategory((p as any)?.description)
+                  const isNeed = cat ? needsCategories.has(cat) : false
+                  const isWant = !isNeed
+                  if (isWant) wantsByDay.set(key, (wantsByDay.get(key)||0) + (p.amount||0))
+                }
+              } catch {}
+            }
+          } catch {}
+        }
+
+        // Compute consecutive-day streak up to today where condition met:
+        // condition: (no wants spending) OR (user saved via roundup)
+        const today = new Date()
+        let streak = 0
+        for (let i=0; i<365; i++) {
+          const d = new Date(today)
+          d.setDate(today.getDate() - i)
+          const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+          const noWants = (wantsByDay.get(key) || 0) === 0
+          const saved = savedDates.has(key)
+          if (noWants || saved) streak++
+          else break
+        }
+        setCurrentStreak(streak)
+        setBadges(prev => prev.map(b => ({
+          ...b,
+          unlocked: b.requiredStreak <= streak,
+          unlockedDate: b.requiredStreak <= streak && !b.unlockedDate ? new Date().toISOString() : b.unlockedDate,
+        })))
+      } finally {
+        setIsLoading(false)
+      }
+    })()
+  }, [userKey, needsCategories])
 
   const unlockedBadges = badges.filter(badge => badge.unlocked);
   const lockedBadges = badges.filter(badge => !badge.unlocked);

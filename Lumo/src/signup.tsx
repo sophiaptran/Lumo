@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import bcrypt from 'bcryptjs'
 import { useNavigate } from "react-router-dom";
 import supabase from "@/assets/supabase-client";
-import { createCustomer } from "@/lib/nessie";
+import { createCustomer, createAccount } from "@/lib/nessie";
 import { RadialOrbitalTimelineDemo } from "./radial-orbital-timeline";
 import { InteractiveNebulaShader } from "./components/ui/liquid-shader";
 
@@ -109,6 +109,8 @@ function SignUpPage() {
         }
       }
 
+      // Note: Auto account creation disabled per request.
+
       const salt = bcrypt.genSaltSync(10)
       const passwordHash = bcrypt.hashSync(password, salt)
 
@@ -118,6 +120,14 @@ function SignUpPage() {
       if (dbError) {
         setError(dbError.message);
       } else {
+        try {
+          if (nessieIdToSave) {
+            localStorage.setItem('nessieCustomerId', nessieIdToSave)
+          } else {
+            localStorage.removeItem('nessieCustomerId')
+          }
+          localStorage.setItem('userEmail', normalizedEmail)
+        } catch {}
         navigate('/signup-success', { replace: true });
       }
     } catch (err: any) {
