@@ -11,4 +11,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      '/nessie': {
+        target: 'http://api.nessieisreal.com',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/nessie/, ''),
+        secure: false,
+      },
+    },
+  },
 })

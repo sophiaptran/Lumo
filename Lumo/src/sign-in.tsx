@@ -32,7 +32,7 @@ const SignInPageDemo = () => {
 
     const { data, error } = await supabase
       .from('userLogin')
-      .select('id')
+      .select('id, nessie_customer_id')
       .eq('email', email)
       .eq('password', password)
       .limit(1)
@@ -45,6 +45,10 @@ const SignInPageDemo = () => {
 
     try {
       localStorage.setItem('userEmail', email);
+    } catch {}
+    try {
+      const cid = (data as any)?.nessie_customer_id as string | undefined
+      if (cid) localStorage.setItem('nessieCustomerId', cid)
     } catch {}
     setSession({ email });
     navigate('/login-success', { replace: true });

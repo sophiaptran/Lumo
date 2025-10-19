@@ -15,6 +15,7 @@ import Home from './pages/Home.tsx'
 import './index.css'
 import Dashboard from './pages/Dashboard.tsx'
 import { SessionProvider } from './session.tsx'
+import Admin from './pages/Admin.tsx'
 import SignupSuccess from './pages/SignupSuccess.tsx'
 import LoginSuccess from './pages/LoginSuccess.tsx'
 import PlanetBadgesPage from './pages/PlanetBadgesPage.tsx'
@@ -39,6 +40,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
         <Route path="/streaks" element={<DashboardLayout><StreaksPage /></DashboardLayout>} />
         <Route path="/badges" element={<DashboardLayout><PlanetBadgesPage /></DashboardLayout>} />
+        <Route path="/admin" element={<Admin />} />
         </Routes>
       </Router>
     </SessionProvider>
