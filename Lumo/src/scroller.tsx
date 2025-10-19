@@ -4,7 +4,7 @@ import ShaderAnimationComponent from "./shader-anim.tsx";
 
 export function HeroScrollDemo() {
   return (
-    <div className="flex flex-col overflow-hidden pb-[100px] pt-[0px]">
+    <div className="flex flex-col overflow-hidden pb-[200px] pt-[-300px]">
       <ContainerScroll
         titleComponent={
           <>
