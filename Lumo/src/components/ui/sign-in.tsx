@@ -22,6 +22,9 @@ interface SignInPageProps {
   onGoogleSignIn?: () => void;
   onResetPassword?: () => void;
   onCreateAccount?: () => void;
+  emailError?: string;
+  passwordError?: string;
+  formError?: string;
 }
 
 // --- SUB-COMPONENTS ---
@@ -54,6 +57,9 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   onGoogleSignIn,
   onResetPassword,
   onCreateAccount,
+  emailError,
+  passwordError,
+  formError,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -76,6 +82,9 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                 <GlassInputWrapper>
                   <input name="email" type="email" placeholder="Enter your email address" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none text-white placeholder:text-white/60" />
                 </GlassInputWrapper>
+                {emailError ? (
+                  <p className="mt-2 text-sm text-red-400">{emailError}</p>
+                ) : null}
               </div>
 
               <div className="animate-element animate-delay-400">
@@ -88,6 +97,9 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                     </button>
                   </div>
                 </GlassInputWrapper>
+                {passwordError ? (
+                  <p className="mt-2 text-sm text-red-400">{passwordError}</p>
+                ) : null}
               </div>
 
               <div className="animate-element animate-delay-500 flex items-center justify-between text-sm">
@@ -101,6 +113,9 @@ export const SignInPage: React.FC<SignInPageProps> = ({
               <button type="submit" className="animate-element animate-delay-600 w-full rounded-2xl bg-primary py-4 font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
                 Sign In
               </button>
+              {formError ? (
+                <p className="mt-3 text-sm text-center text-red-400">{formError}</p>
+              ) : null}
             </form>
 
             <div className="animate-element animate-delay-700 relative flex items-center justify-center">
