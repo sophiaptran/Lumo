@@ -6,7 +6,7 @@ import { BentoGrid, BentoGridItem } from "@/components/ui/dashboard";
 import { PieCharts } from "@/components/ui/pie-chart";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { cn } from "@/lib/utils";
-import { BarChart, Trophy, Zap } from "lucide-react";
+import { BarChart, Trophy, Zap, MapPin } from "lucide-react";
 import { MonthlyBarGraph } from "@/components/ui/bar-graph";
 
 const AuroraBackground = () => {
@@ -71,12 +71,12 @@ const GlowingBentoItem = ({
   );
 };
 
-// Sidebar Component (Unchanged)
 const Sidebar = () => {
   const menuItems = [
     { name: "Analytics", icon: BarChart, current: true },
     { name: "Streaks", icon: Zap, current: false },
     { name: "Badges", icon: Trophy, current: false },
+    { name: "Map", icon: MapPin, current: false },
   ];
 
   return (
@@ -247,7 +247,7 @@ export const Dashboard = () => {
                 <h2 className="text-lg font-semibold mb-1 opacity-80">
                   Savings Goal
                 </h2>
-                <p className="text-3xl font-bold  text-white-500">65%</p>
+                <p className="text-3xl font-bold  text-white">65%</p>
                 <p className="text-xs opacity-40 mt-1">$6,500 / $10,000</p>
               </div>
             </GlowingBentoItem>
