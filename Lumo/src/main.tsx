@@ -15,6 +15,7 @@ import Home from './pages/Home.tsx'
 import './index.css'
 import Dashboard from './pages/Dashboard.tsx'
 import { SessionProvider } from './session.tsx'
+import Admin from './pages/Admin.tsx'
 import SignupSuccess from './pages/SignupSuccess.tsx'
 import LoginSuccess from './pages/LoginSuccess.tsx'
 
@@ -34,6 +35,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/signup-success" element={<SignupSuccess />} />
         <Route path="/login-success" element={<LoginSuccess />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin" element={<Admin />} />
         </Routes>
       </Router>
     </SessionProvider>

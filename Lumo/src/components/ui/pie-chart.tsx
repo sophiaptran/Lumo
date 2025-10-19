@@ -11,6 +11,7 @@ type PieChartsProps = {
 
 export const PieCharts = ({ data, colors, title }: PieChartsProps) => {
   const total = data.reduce((sum, item) => sum + item.value, 0);
+  const currencyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   return (
     <div className="text-white h-full flex flex-col">
@@ -42,7 +43,7 @@ export const PieCharts = ({ data, colors, title }: PieChartsProps) => {
         {/* Legend */}
         <div className="flex-1 space-y-3">
           {data.map((item) => {
-            const percentage = ((item.value / total) * 100).toFixed(0);
+            const percentage = total > 0 ? ((item.value / total) * 100).toFixed(0) : '0';
             return (
               <div key={item.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -54,7 +55,7 @@ export const PieCharts = ({ data, colors, title }: PieChartsProps) => {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm opacity-70">{percentage}%</span>
-                  <span className="text-sm font-semibold w-16 text-right">${item.value}</span>
+                  <span className="text-sm font-semibold w-16 text-right">{currencyFmt.format(Number(item.value))}</span>
                 </div>
               </div>
             );
@@ -66,7 +67,7 @@ export const PieCharts = ({ data, colors, title }: PieChartsProps) => {
       <div className="mt-4 pt-4 border-t border-white/20">
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium">Total Spending</span>
-          <span className="text-xl font-bold">${total}</span>
+          <span className="text-xl font-bold">{currencyFmt.format(Number(total))}</span>
         </div>
       </div>
     </div>
