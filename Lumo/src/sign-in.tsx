@@ -70,11 +70,18 @@ const SignInPageDemo = () => {
   }
 
   const handleCreateAccount = () => {
-    alert("Create Account clicked");
+    navigate('/signup');
   }
 
   return (
-    <div className="bg-background text-foreground">
+    <div className="bg-background text-foreground relative">
+      {/* Go Back button */}
+      <button 
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-6 z-20 text-white/80 hover:text-white transition-colors text-sm font-medium"
+      >
+        ← Go Back
+      </button>
       <SignInPage
         heroImageSrc="https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=2160&q=80"
         onSignIn={handleSignIn}

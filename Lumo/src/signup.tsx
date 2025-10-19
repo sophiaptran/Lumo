@@ -129,16 +129,23 @@ function SignUpPage() {
 
   return (
     <div className="h-[100dvh] flex flex-row font-geist w-[100dvw] bg-black">
+      {/* Go Back button */}
+      <button 
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-6 z-20 text-white/80 hover:text-white transition-colors text-sm font-medium"
+      >
+        ← Go Back
+      </button>
       <section className="w-1/2 flex items-center justify-center p-8 relative">
         <div className="absolute inset-0 z-0">
           <InteractiveNebulaShader />
         </div>
-        <div className="w-full max-w-2xl relative z-10">
-            <div className="flex flex-col gap-6 p-8 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-2xl">
+        <div className="w-full max-w-xl relative z-10 ml-16">
+            <div className="flex flex-col gap-4 p-6 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-2xl">
             <h1 className="text-4xl md:text-5xl font-semibold leading-tight text-white">Create your account</h1>
             <p className="text-white/80">Welcome to Lumo</p>
 
-            <form className="space-y-5" onSubmit={onSubmit}>
+            <form className="space-y-4" onSubmit={onSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <GlassInputWrapper>
                   <input
