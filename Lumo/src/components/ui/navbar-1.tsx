@@ -3,6 +3,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { Menu, X } from "lucide-react"
 
+
 const Navbar1 = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [hidden, setHidden] = useState(false)
