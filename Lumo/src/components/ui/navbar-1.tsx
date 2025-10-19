@@ -2,7 +2,7 @@ import * as React from "react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { Menu, X } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+
 
 const Navbar1 = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -52,57 +52,19 @@ const Navbar1 = () => {
         
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Link 
-                to="/" 
-                className={`text-sm transition-colors font-medium ${
-                  location.pathname === '/' 
-                    ? 'text-blue-800' 
-                    : 'text-gray-900 hover:text-gray-600'
-                }`}
+            {["Home", "Pricing", "Docs", "Projects"].map((item) => (
+              <motion.div
+                key={item}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                whileHover={{ scale: 1.05 }}
               >
-                Home
-              </Link>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Link 
-                to="/streaks" 
-                className={`text-sm transition-colors font-medium ${
-                  location.pathname === '/streaks' 
-                    ? 'text-blue-800' 
-                    : 'text-gray-900 hover:text-gray-600'
-                }`}
-              >
-                Streaks
-              </Link>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Link 
-                to="/badges" 
-                className={`text-sm transition-colors font-medium ${
-                  location.pathname === '/badges' 
-                    ? 'text-blue-800' 
-                    : 'text-gray-900 hover:text-gray-600'
-                }`}
-              >
-                Badges
-              </Link>
-            </motion.div>
+                <a href={`../${item}.tsx`} className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium">
+                  {item}
+                </a>
+              </motion.div>
+            ))}
           </nav>
 
         {/* Desktop CTA Button */}
@@ -113,8 +75,8 @@ const Navbar1 = () => {
           transition={{ duration: 0.3, delay: 0.2 }}
           whileHover={{ scale: 1.05 }}
         >
-          <Link
-            to="/streaks"
+          <a
+            href="../signup"
             className="inline-flex items-center justify-center px-5 py-2 text-sm text-white bg-black rounded-full hover:bg-gray-800 transition-colors"
           >
             Get Started
@@ -219,8 +181,8 @@ const Navbar1 = () => {
                   className="inline-flex items-center justify-center w-full px-5 py-3 text-base text-white bg-black rounded-full hover:bg-gray-800 transition-colors"
                   onClick={toggleMenu}
                 >
-                  Get Started
-                </Link>
+                  Login
+                </a>
               </motion.div>
             </div>
           </motion.div>

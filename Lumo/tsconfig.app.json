@@ -31,5 +31,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/components/blocks/sign-in-flow-1.tsx",
+    "src/components/ui/animated-shader-background.tsx"
+  ]
 }
