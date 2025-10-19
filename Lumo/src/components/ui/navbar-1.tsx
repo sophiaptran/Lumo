@@ -2,10 +2,12 @@ import * as React from "react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { Menu, X } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
 
 const Navbar1 = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [hidden, setHidden] = useState(false)
+  const location = useLocation()
 
   const toggleMenu = () => setIsOpen(!isOpen)
 
@@ -50,19 +52,57 @@ const Navbar1 = () => {
         
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            {["Home", "Pricing", "Docs", "Projects"].map((item) => (
-              <motion.div
-                key={item}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                whileHover={{ scale: 1.05 }}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              whileHover={{ scale: 1.05 }}
+            >
+              <Link 
+                to="/" 
+                className={`text-sm transition-colors font-medium ${
+                  location.pathname === '/' 
+                    ? 'text-blue-800' 
+                    : 'text-gray-900 hover:text-gray-600'
+                }`}
               >
-                <a href="#" className="text-sm text-gray-900 hover:text-gray-600 transition-colors font-medium">
-                  {item}
-                </a>
-              </motion.div>
-            ))}
+                Home
+              </Link>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              whileHover={{ scale: 1.05 }}
+            >
+              <Link 
+                to="/streaks" 
+                className={`text-sm transition-colors font-medium ${
+                  location.pathname === '/streaks' 
+                    ? 'text-blue-800' 
+                    : 'text-gray-900 hover:text-gray-600'
+                }`}
+              >
+                Streaks
+              </Link>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              whileHover={{ scale: 1.05 }}
+            >
+              <Link 
+                to="/badges" 
+                className={`text-sm transition-colors font-medium ${
+                  location.pathname === '/badges' 
+                    ? 'text-blue-800' 
+                    : 'text-gray-900 hover:text-gray-600'
+                }`}
+              >
+                Badges
+              </Link>
+            </motion.div>
           </nav>
 
         {/* Desktop CTA Button */}
@@ -73,12 +113,12 @@ const Navbar1 = () => {
           transition={{ duration: 0.3, delay: 0.2 }}
           whileHover={{ scale: 1.05 }}
         >
-          <a
-            href="#"
+          <Link
+            to="/streaks"
             className="inline-flex items-center justify-center px-5 py-2 text-sm text-white bg-black rounded-full hover:bg-gray-800 transition-colors"
           >
             Get Started
-          </a>
+          </Link>
         </motion.div>
 
         {/* Mobile Menu Button */}
@@ -108,19 +148,64 @@ const Navbar1 = () => {
               <X className="h-6 w-6 text-gray-900" />
             </motion.button>
             <div className="flex flex-col space-y-6">
-              {["Home", "Pricing", "Docs", "Projects"].map((item, i) => (
-                <motion.div
-                  key={item}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 + 0.1 }}
-                  exit={{ opacity: 0, x: 20 }}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <Link 
+                  to="/" 
+                  className={`text-base font-medium transition-colors ${
+                    location.pathname === '/' 
+                      ? 'text-blue-800' 
+                      : 'text-gray-900'
+                  }`} 
+                  onClick={toggleMenu}
                 >
-                  <a href="#" className="text-base text-gray-900 font-medium" onClick={toggleMenu}>
-                    {item}
-                  </a>
-                </motion.div>
-              ))}
+                  Home
+                </Link>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <Link 
+                  to="/streaks" 
+                  className={`text-base font-medium transition-colors ${
+                    location.pathname === '/streaks' 
+                      ? 'text-blue-800' 
+                      : 'text-gray-900'
+                  }`} 
+                  onClick={toggleMenu}
+                >
+                  Streaks
+                </Link>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <Link 
+                  to="/badges" 
+                  className={`text-base font-medium transition-colors ${
+                    location.pathname === '/badges' 
+                      ? 'text-blue-800' 
+                      : 'text-gray-900'
+                  }`} 
+                  onClick={toggleMenu}
+                >
+                  Badges
+                </Link>
+              </motion.div>
+              
+              
 
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -129,13 +214,13 @@ const Navbar1 = () => {
                 exit={{ opacity: 0, y: 20 }}
                 className="pt-6"
               >
-                <a
-                  href="#"
-                  className="inline-flex items-center justify-center w-full px-5 py-3 text-base text-white bg-black rounded-full hover:bg-gray-800 transition-colors "
+                <Link
+                  to="/streaks"
+                  className="inline-flex items-center justify-center w-full px-5 py-3 text-base text-white bg-black rounded-full hover:bg-gray-800 transition-colors"
                   onClick={toggleMenu}
                 >
                   Get Started
-                </a>
+                </Link>
               </motion.div>
             </div>
           </motion.div>
