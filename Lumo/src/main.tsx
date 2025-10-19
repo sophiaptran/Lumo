@@ -17,6 +17,9 @@ import Dashboard from './pages/Dashboard.tsx'
 import { SessionProvider } from './session.tsx'
 import SignupSuccess from './pages/SignupSuccess.tsx'
 import LoginSuccess from './pages/LoginSuccess.tsx'
+import PlanetBadgesPage from './pages/PlanetBadgesPage.tsx'
+import StreaksPage from './pages/StreaksPage.tsx'
+import DashboardLayout from './components/DashboardLayout.tsx'
 
 // Home component that contains the main content
 // HomePage no longer used; logged-in Home is default
@@ -33,7 +36,9 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/signup-success" element={<SignupSuccess />} />
         <Route path="/login-success" element={<LoginSuccess />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+        <Route path="/streaks" element={<DashboardLayout><StreaksPage /></DashboardLayout>} />
+        <Route path="/badges" element={<DashboardLayout><PlanetBadgesPage /></DashboardLayout>} />
         </Routes>
       </Router>
     </SessionProvider>

@@ -303,9 +303,9 @@ const PlanetBadgesPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+    <div className="relative z-10">
       <BackgroundBeams />
-      <div className="container mx-auto px-4 pt-24 pb-16 relative z-10">
+      <div className="container mx-auto px-4 pt-6 pb-16 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -363,14 +363,9 @@ const PlanetBadgesPage: React.FC = () => {
               </h3>
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <PlanetCanvas
-                    modelPath={nextBadge.modelPath}
-                    scale={1.2}
-                    rotationSpeed={0.02}
-                    unlocked={true}
-                    planetStyle={nextBadge.planetStyle}
-                    className="w-24 h-24"
-                  />
+                  <div className="w-24 h-24 flex items-center justify-center bg-gradient-to-br from-purple-600/20 to-purple-800/20 rounded-full border border-purple-500/30">
+                    <Lock className="w-12 h-12 text-purple-400" />
+                  </div>
                 </div>
                 <div className="flex-1">
                   <h4 className="text-lg font-medium text-white mb-1">{nextBadge.name}</h4>

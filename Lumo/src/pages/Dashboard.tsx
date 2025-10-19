@@ -2,11 +2,10 @@
 import { useEffect, useState } from 'react'
 import supabase from '@/assets/supabase-client'
 import { useSession } from '@/session'
-import { AuroraBackground, BentoGrid, BentoGridItem } from '@/components/ui/dashboard'
+import { BentoGrid, BentoGridItem } from '@/components/ui/dashboard'
 import { PieCharts } from '@/components/ui/pie-chart'
 import { GlowingEffect } from '@/components/ui/glowing-effect'
 import { cn } from '@/lib/utils'
-import { BarChart, Trophy, Zap } from 'lucide-react'
 import { MonthlyBarGraph } from '@/components/ui/bar-graph'
 
 function capitalize(word: string) {
@@ -38,22 +37,16 @@ export default function Dashboard() {
   }, [session?.email])
 
   return (
-    <div className="min-h-screen w-full bg-black text-white relative">
-      <AuroraBackground />
-      <div className="relative z-10 px-6 pt-6">
+    <div className="relative z-10">
+      <div className="px-6 pt-6">
         <h1 className="text-3xl md:text-4xl font-semibold">Dashboard</h1>
         {fullName && (
           <p className="mt-2 text-white/80 text-lg">Welcome, {fullName}</p>
         )}
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-12 gap-6 pt-6 pb-12 px-6">
-        <div className="col-span-12 md:col-span-3 lg:col-span-2">
-          <Sidebar />
-        </div>
-
-        <div className="col-span-12 md:col-span-9 lg:col-span-10">
-          <BentoGrid>
+      <div className="pt-6">
+        <BentoGrid>
             <GlowingBentoItem
               className="md:col-span-4 md:row-span-2"
               gradientFrom="from-slate-800/60"
@@ -170,7 +163,6 @@ export default function Dashboard() {
               </div>
             </GlowingBentoItem>
           </BentoGrid>
-        </div>
       </div>
     </div>
   )
@@ -212,32 +204,6 @@ function GlowingBentoItem({
   )
 }
 
-function Sidebar() {
-  const menuItems = [
-    { name: 'Analytics', icon: BarChart, current: true },
-    { name: 'Streaks', icon: Zap, current: false },
-    { name: 'Badges', icon: Trophy, current: false },
-  ]
-  return (
-    <div className="flex flex-col space-y-4 pt-16 px-4">
-      {menuItems.map((item) => (
-        <a
-          key={item.name}
-          href={`#${item.name.toLowerCase()}`}
-          className={cn(
-            'flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200',
-            item.current
-              ? 'bg-purple-600/30 text-purple-300 border border-purple-600 shadow-lg'
-              : 'text-white/70 hover:bg-slate-800/50 hover:text-white'
-          )}
-        >
-          <item.icon className="w-5 h-5" />
-          <span className="font-medium">{item.name}</span>
-        </a>
-      ))}
-    </div>
-  )
-}
 
 const spendingData = [
   { name: 'Food', value: 400 },
