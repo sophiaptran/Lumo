@@ -1,15 +1,95 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BackgroundBeams } from '@/components/ui/background-beams';
+import { getCustomerAccounts, getAccountPurchases, type NessiePurchase } from '@/lib/nessie'
+import { useSession } from '@/session'
 
 const StreaksPage: React.FC = () => {
-  const [selectedStreak, setSelectedStreak] = useState<number | null>(null);
+  const [selectedStreak, setSelectedStreak] = useState<number | null>(0);
+  const [savedDates, setSavedDates] = useState<Set<string>>(new Set());
+  const [noWantsDates, setNoWantsDates] = useState<Set<string>>(new Set());
+  const { session } = useSession()
+  const userKey = useMemo(() => session?.email || localStorage.getItem('userEmail') || 'anon', [session?.email])
+
+  const needsCategories = useMemo(() => new Set([
+    'Groceries','Wholesale','Utilities','Bills','Transportation','Health','Insurance','Education','Phone'
+  ]), [])
+
+  function normalizeCategory(name?: string): string | undefined {
+    if (!name) return undefined
+    const n = String(name).toLowerCase()
+    if (/(grocery|grocer|supermarket)/.test(n)) return 'Groceries'
+    if (/(wholesale|costco|sam's club|sams club|bj's|bjs)/.test(n)) return 'Wholesale'
+    if (/(restaurant|dining|food|cafe|coffee)/.test(n)) return 'Dining'
+    if (/(shopping|retail|store|walmart|target|amazon)/.test(n)) return 'Shopping'
+    if (/(uber|lyft|airline|flight|hotel|travel|taxi)/.test(n)) return 'Travel'
+    if (/(movie|cinema|netflix|spotify|entertain)/.test(n)) return 'Entertainment'
+    if (/(bill|electric|water|gas|utility|utilities|internet)/.test(n)) return 'Utilities'
+    if (/(fuel|gas station|parking|toll|transport)/.test(n)) return 'Transportation'
+    if (/(pharmacy|health|doctor|hospital|medical)/.test(n)) return 'Health'
+    if (/(rent|mortgage)/.test(n)) return 'Bills'
+    return name.charAt(0).toUpperCase() + name.slice(1)
+  }
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const arr = JSON.parse(localStorage.getItem(`roundupSavedDates:${userKey}`) || '[]') as string[]
+        setSavedDates(new Set(arr))
+      } catch {}
+
+      const customerId = localStorage.getItem('nessieCustomerId') || ''
+      if (!customerId) { setNoWantsDates(new Set()); return }
+
+      try {
+        const accs = await getCustomerAccounts(customerId)
+        const today = new Date()
+        const currentMonth = today.getMonth()
+        const currentYear = today.getFullYear()
+        const wantsByDay = new Map<string, number>()
+        for (const a of accs) {
+          try {
+            const ps: NessiePurchase[] = await getAccountPurchases(a._id)
+            for (const p of ps) {
+              if (!p.purchase_date) continue
+              const d = new Date(p.purchase_date)
+              if (d.getFullYear() !== currentYear || d.getMonth() !== currentMonth) continue
+              const key = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+              const cat = (p.category as string) || normalizeCategory((p as any)?.description)
+              const isNeed = cat ? needsCategories.has(cat) : false
+              const isWant = !isNeed
+              if (isWant) wantsByDay.set(key, (wantsByDay.get(key)||0) + (p.amount||0))
+            }
+          } catch {}
+        }
+
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+        const noWants = new Set<string>()
+        for (let day=1; day<=daysInMonth; day++) {
+          const dayDate = new Date(currentYear, currentMonth, day)
+          if (dayDate > today) continue
+          const key = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+          if ((wantsByDay.get(key) || 0) === 0) noWants.add(key)
+        }
+        setNoWantsDates(noWants)
+      } catch {}
+    }
+    load()
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'nessie:lastChange' || e.key?.startsWith('roundupSavedDates:')) load()
+    }
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    window.addEventListener('storage', onStorage)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [needsCategories, userKey])
 
   const streakTypes = [
     { name: 'No Spending on Wants', color: 'bg-purple-500/40' },
-    { name: 'Balance Check', color: 'bg-blue-500/40' },
-    { name: 'Investing Goals', color: 'bg-green-500/40' },
-    { name: 'Lesson a Day', color: 'bg-red-600/40' }
+    { name: 'Round-up Savings', color: 'bg-green-500/40' },
   ];
 
   return (
@@ -65,9 +145,15 @@ const StreaksPage: React.FC = () => {
                   const isCurrentMonth = day > 0 && day <= new Date(currentYear, currentMonth + 1, 0).getDate();
                   const isToday = day === currentDay && isCurrentMonth;
                   
-                  // Generate random streaks for demo - only show selected streak type
-                  const hasStreak = isCurrentMonth && Math.random() < 0.3;
-                  const showStreak = hasStreak && selectedStreak !== null;
+                  const key = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+                  let showStreak = false
+                  if (isCurrentMonth && selectedStreak !== null) {
+                    if (selectedStreak === 0) {
+                      showStreak = noWantsDates.has(key)
+                    } else if (selectedStreak === 1) {
+                      showStreak = savedDates.has(key)
+                    }
+                  }
                   
                   return (
                     <div

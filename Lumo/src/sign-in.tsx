@@ -54,7 +54,11 @@ const SignInPageDemo = () => {
     } catch {}
     try {
       const cid = (data as any)?.nessie_customer_id as string | undefined
-      if (cid) localStorage.setItem('nessieCustomerId', cid)
+      if (cid) {
+        localStorage.setItem('nessieCustomerId', cid)
+      } else {
+        localStorage.removeItem('nessieCustomerId')
+      }
     } catch {}
     setSession({ email });
     navigate('/login-success', { replace: true });

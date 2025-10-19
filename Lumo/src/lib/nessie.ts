@@ -54,16 +54,40 @@ export async function getCustomers(): Promise<any[]> {
   return nessieGet('/customers')
 }
 
+// Global data reset (if supported by sandbox)
+export async function deleteAllData(): Promise<void> {
+  await nessieRequest('DELETE', '/data')
+}
+
 export async function deleteCustomer(id: string): Promise<void> {
-  // Try legacy POST delete first (commonly supported in sandbox), then DELETE
-  try { await nessieRequest('POST', `/customers/${id}/delete`); return } catch {}
-  await nessieRequest('DELETE', `/customers/${id}`)
+  // Prefer DELETE; fallback to legacy POST .../delete if needed
+  try { await nessieRequest('DELETE', `/customers/${id}`); return } catch {}
+  await nessieRequest('POST', `/customers/${id}/delete`)
 }
 
 export async function deleteAccount(id: string): Promise<void> {
-  // Try legacy POST delete first, then DELETE
-  try { await nessieRequest('POST', `/accounts/${id}/delete`); return } catch {}
-  await nessieRequest('DELETE', `/accounts/${id}`)
+  // Prefer DELETE; fallback to legacy POST .../delete if needed
+  try { await nessieRequest('DELETE', `/accounts/${id}`); return } catch {}
+  await nessieRequest('POST', `/accounts/${id}/delete`)
+}
+
+export async function getMerchants(): Promise<any[]> {
+  return nessieGet('/merchants')
+}
+
+export async function deleteMerchant(id: string): Promise<void> {
+  try { await nessieRequest('DELETE', `/merchants/${id}`); return } catch {}
+  await nessieRequest('POST', `/merchants/${id}/delete`)
+}
+
+export async function deletePurchase(id: string): Promise<void> {
+  try { await nessieRequest('DELETE', `/purchases/${id}`); return } catch {}
+  await nessieRequest('POST', `/purchases/${id}/delete`)
+}
+
+export async function deleteBill(id: string): Promise<void> {
+  try { await nessieRequest('DELETE', `/bills/${id}`); return } catch {}
+  await nessieRequest('POST', `/bills/${id}/delete`)
 }
 
 export type NessieAccount = {

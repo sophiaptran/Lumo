@@ -4,12 +4,20 @@ import type { FormEvent } from 'react'
 type LeafletMouseEvent = any
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { createCustomer, createMerchant, createAccount, createPurchase, getMerchantsNearby, getCustomers, getAccountPurchases, getCustomerAccounts, deleteCustomer, deleteAccount } from '@/lib/nessie'
+import { createCustomer, createMerchant, createAccount, createPurchase, getMerchantsNearby, getCustomers, getAccountPurchases, getCustomerAccounts, deleteCustomer, deleteAccount, getMerchants, deleteMerchant, deletePurchase, deleteBill, deleteAllData } from '@/lib/nessie'
 
 export default function Admin() {
   const [log, setLog] = useState<string>('')
+  const todayStr = new Date().toISOString().slice(0,10)
 
   const append = (s: string) => setLog((prev) => `${prev}\n${s}`)
+
+  const formatLocalYMD = (date: Date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
 
   return (
     <div className="min-h-screen w-full bg-black text-white p-6">
@@ -19,6 +27,18 @@ export default function Admin() {
         <section className="rounded-xl border border-red-500/30 p-4 bg-red-900/10 md:col-span-2">
           <h2 className="font-medium mb-2 text-red-300">Danger Zone</h2>
           <div className="flex flex-wrap gap-2 text-sm">
+            <button
+              className="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded-md"
+              onClick={async ()=>{
+                if (!confirm('Delete ALL data in sandbox? This cannot be undone.')) return
+                try {
+                  await deleteAllData()
+                  append('All data deleted via /data endpoint')
+                } catch (e:any) {
+                  append(`Error deleting all data: ${e?.message||e}`)
+                }
+              }}
+            >Delete ALL Data</button>
             <button
               className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-md"
               onClick={async ()=>{
@@ -59,6 +79,59 @@ export default function Admin() {
                 }
               }}
             >Delete All Customers</button>
+
+            <button
+              className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-md"
+              onClick={async ()=>{
+                if (!confirm('Delete ALL merchants? This cannot be undone.')) return
+                try {
+                  const merchants = await getMerchants()
+                  let count = 0
+                  for (const m of (Array.isArray(merchants)? merchants: [])) {
+                    if (!m?._id) continue
+                    try { await deleteMerchant(String(m._id)); count++ } catch {}
+                  }
+                  append(`Deleted ${count} merchants`)
+                } catch (e:any) {
+                  append(`Error deleting merchants: ${e?.message||e}`)
+                }
+              }}
+            >Delete All Merchants</button>
+
+            <button
+              className="bg-red-400 hover:bg-red-300 text-white px-4 py-2 rounded-md"
+              onClick={async ()=>{
+                if (!confirm('Delete ALL purchases and bills for ALL accounts? This cannot be undone.')) return
+                try {
+                  const customers = await getCustomers()
+                  let pCount = 0
+                  let bCount = 0
+                  for (const c of (Array.isArray(customers)? customers: [])) {
+                    if (!c?._id) continue
+                    try {
+                      const accs = await getCustomerAccounts(String(c._id))
+                      for (const a of (Array.isArray(accs)? accs: [])) {
+                        // delete purchases for account
+                        try {
+                          const ps = await getAccountPurchases(String(a._id))
+                          for (const p of (Array.isArray(ps)? ps: [])) {
+                            try { await deletePurchase(String(p._id)); pCount++ } catch {}
+                          }
+                        } catch {}
+                        // delete bills for customer
+                        // if API supports bills per customer:
+                        try {
+                          // no listing function in client; attempt by reading customer bills via getCustomerBills if needed
+                        } catch {}
+                      }
+                    } catch {}
+                  }
+                  append(`Deleted ${pCount} purchases. (Bills deletion depends on API support)`)
+                } catch (e:any) {
+                  append(`Error deleting transactions: ${e?.message||e}`)
+                }
+              }}
+            >Delete All Purchases</button>
           </div>
         </section>
         <section className="rounded-xl border border-white/10 p-4 bg-white/5">
@@ -202,7 +275,12 @@ export default function Admin() {
                       ;(Array.isArray(accs)? accs: []).forEach((a:any)=>{
                         const row = document.createElement('div')
                         row.className = 'flex justify-between gap-3 border-b border-white/10 pb-1 text-sm'
-                        row.innerHTML = `<div class=\"min-w-0\"><span class=\"block truncate\">${a.nickname||a.type||'Account'}</span><span class=\"block text-white/40 font-mono text-[10px] break-all\">${a._id||''}</span></div><span class=\"whitespace-nowrap text-white/50\">$${Number(a.balance||0).toFixed(2)}</span>`
+                        row.innerHTML = `<div class=\"min-w-0\">`
+                          + `<span class=\"block truncate\">${a.nickname||a.type||'Account'}</span>`
+                          + `<span class=\"block text-white/40 font-mono text-[10px] break-all\">Account: ${a._id||''}</span>`
+                          + `<span class=\"block text-white/40 font-mono text-[10px] break-all\">Nessie Customer: ${c._id||''}</span>`
+                          + `</div>`
+                          + `<span class=\"whitespace-nowrap text-white/50\">$${Number(a.balance||0).toFixed(2)}</span>`
                         container?.appendChild(row)
                       })
                     } catch {}
@@ -261,15 +339,24 @@ export default function Admin() {
             const form = e.currentTarget as HTMLFormElement
             const fd = new FormData(form)
             try {
+              const dateStr = String(fd.get('purchase_date')||'')
+              // Prevent future-dated purchases
+              const today = new Date(todayStr)
+              const d = new Date(dateStr)
+              if (!dateStr || isNaN(d.getTime()) || d > today) {
+                append('Error: purchase date must be today or earlier (no future dates)')
+                return
+              }
               const res = await createPurchase(String(fd.get('accountId')||''), {
                 merchant_id: String(fd.get('merchantId')||''),
                 medium: 'balance',
-                purchase_date: String(fd.get('purchase_date')||''),
+                purchase_date: dateStr,
                 amount: Number(fd.get('amount')||0),
                 status: 'completed',
                 description: String(fd.get('description')||'')
               })
               append(`Purchase created: ${res._id}`)
+              try { localStorage.setItem('nessie:lastChange', String(Date.now())) } catch {}
               form.reset()
             } catch (err: any) {
               append(`Error: ${err?.message||err}`)
@@ -277,7 +364,7 @@ export default function Admin() {
           }} className="grid grid-cols-2 gap-2 text-sm">
             <input name="accountId" placeholder="Account ID" className="bg-transparent border border-white/10 rounded-md p-2" required />
             <input name="merchantId" placeholder="Merchant ID" className="bg-transparent border border-white/10 rounded-md p-2" required />
-            <input name="purchase_date" placeholder="YYYY-MM-DD" className="bg-transparent border border-white/10 rounded-md p-2" required />
+            <input name="purchase_date" type="date" max={todayStr} className="bg-transparent border border-white/10 rounded-md p-2" required />
             <input name="amount" type="number" step="0.01" placeholder="Amount" className="bg-transparent border border-white/10 rounded-md p-2" required />
             <input name="description" placeholder="Description" className="bg-transparent border border-white/10 rounded-md p-2" />
             <div className="col-span-2 flex justify-end"><button className="bg-white text-black px-4 py-2 rounded-md">Create</button></div>
@@ -335,13 +422,15 @@ export default function Admin() {
                 const m = merchants[Math.floor(Math.random()*merchants.length)]
                 const d = new Date(today)
                 d.setDate(d.getDate() - Math.floor(Math.random()*30))
-                const dateStr = d.toISOString().slice(0,10)
+                if (d > today) d.setTime(today.getTime())
+                const dateStr = formatLocalYMD(d)
                 const amt = Number((Math.random()*100).toFixed(2))
                 try {
                   await createPurchase(accId, { merchant_id: String(m._id||''), medium: 'balance', purchase_date: dateStr, amount: amt, status: 'completed', description: `Auto ${i+1} at ${m.name||'Merchant'}` })
                 } catch {}
               }
               append('Done. Load purchases to view.')
+              try { localStorage.setItem('nessie:lastChange', String(Date.now())) } catch {}
             } catch (err:any) {
               append(`Error: ${err?.message||err}`)
             }

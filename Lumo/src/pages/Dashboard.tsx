@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import supabase from '@/assets/supabase-client'
 import { useSession } from '@/session'
@@ -20,6 +21,7 @@ function standardizeCategoryName(name?: string): string | undefined {
   const n = String(name).toLowerCase()
   if (n === 'other' || n === 'misc' || n === 'uncategorized') return undefined
   if (/(grocery|grocer|supermarket)/.test(n)) return 'Groceries'
+  if (/(wholesale|costco|sam's club|sams club|bj's|bjs)/.test(n)) return 'Wholesale'
   if (/(restaurant|dining|food|cafe|coffee|starbucks)/.test(n)) return 'Dining'
   if (/(shopping|retail|store|walmart|target|amazon)/.test(n)) return 'Shopping'
   if (/(uber|lyft|airline|flight|hotel|travel|taxi)/.test(n)) return 'Travel'
@@ -44,11 +46,26 @@ export default function Dashboard() {
   const [fullName, setFullName] = useState<string>('')
   const { session } = useSession()
   const currencyFmt = useMemo(() => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }), [])
+  const needsCategories = useMemo(() => new Set([
+    'Groceries',
+    'Wholesale',
+    'Utilities',
+    'Bills',
+    'Transportation',
+    'Health',
+    'Insurance',
+    'Education',
+    'Phone',
+  ]), [])
+  const navigate = useNavigate()
+  const userKey = useMemo(() => session?.email || localStorage.getItem('userEmail') || 'anon', [session?.email])
   // Categories are normalized per-purchase; we no longer collapse to "Other".
   const [customerId, setCustomerId] = useState<string>('')
   const [accounts, setAccounts] = useState<NessieAccount[]>([])
   const [purchases, setPurchases] = useState<NessiePurchase[]>([])
   const [bills, setBills] = useState<NessieBill[]>([])
+  const [savedToday, setSavedToday] = useState<boolean>(false)
+  const [totalRoundupSaved, setTotalRoundupSaved] = useState<number>(0)
 
   useEffect(() => {
     const email = session?.email || localStorage.getItem('userEmail') || ''
@@ -57,7 +74,7 @@ export default function Dashboard() {
     ;(async () => {
       const { data, error } = await supabase
         .from('userLogin')
-        .select('first_name, last_name')
+        .select('first_name, last_name, nessie_customer_id')
         .eq('email', email)
         .limit(1)
         .single()
@@ -65,14 +82,58 @@ export default function Dashboard() {
         const first = capitalize(data.first_name as string)
         const last = capitalize(data.last_name as string)
         setFullName(`${first} ${last}`)
+        const cid = (data as any)?.nessie_customer_id as string | null
+        if (cid) {
+          setCustomerId(cid)
+          try { localStorage.setItem('nessieCustomerId', cid) } catch {}
+        }
       }
     })()
   }, [session?.email])
 
   useEffect(() => {
+    if (customerId) return
     const stored = localStorage.getItem('nessieCustomerId') || ''
     setCustomerId(stored)
-  }, [])
+  }, [session?.email, customerId])
+
+  useEffect(() => {
+    const today = new Date()
+    const y = today.getFullYear()
+    const m = String(today.getMonth() + 1).padStart(2, '0')
+    const d = String(today.getDate()).padStart(2, '0')
+    const dayKey = `${y}-${m}-${d}`
+    try {
+      const dates = JSON.parse(localStorage.getItem(`roundupSavedDates:${userKey}`) || '[]') as string[]
+      setSavedToday(dates.includes(dayKey))
+    } catch {}
+    try {
+      const total = Number(localStorage.getItem(`roundupSavedTotal:${userKey}`) || '0')
+      setTotalRoundupSaved(Number(total.toFixed(2)))
+    } catch {}
+  }, [userKey])
+
+  const handleSaveToday = () => {
+    const today = new Date()
+    const y = today.getFullYear()
+    const m = String(today.getMonth() + 1).padStart(2, '0')
+    const d = String(today.getDate()).padStart(2, '0')
+    const key = `${y}-${m}-${d}`
+    try {
+      const dates = JSON.parse(localStorage.getItem(`roundupSavedDates:${userKey}`) || '[]') as string[]
+      if (!dates.includes(key)) {
+        dates.push(key)
+        localStorage.setItem(`roundupSavedDates:${userKey}`, JSON.stringify(dates))
+        setSavedToday(true)
+      }
+    } catch {}
+    try {
+      const prev = Number(localStorage.getItem(`roundupSavedTotal:${userKey}`) || '0')
+      const next = Number((prev + roundUpSavingsTotal).toFixed(2))
+      localStorage.setItem(`roundupSavedTotal:${userKey}`, String(next))
+      setTotalRoundupSaved(next)
+    } catch {}
+  }
 
   useEffect(() => {
     if (!customerId) return
@@ -112,6 +173,22 @@ export default function Dashboard() {
         console.error(e)
       }
     })()
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'nessie:lastChange') {
+        setCustomerId((id) => id ? `${id}` : id)
+      }
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        setCustomerId((id) => id ? `${id}` : id)
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [customerId])
 
   const pieData = useMemo(() => {
@@ -161,7 +238,7 @@ export default function Dashboard() {
     for (const p of purchases) {
       const amt = p.amount || 0
       const cat = (p.category as string) || chooseCategory(undefined, (p as any)?.description)
-      const isNeed = ['Groceries','Utilities','Bills','Transportation','Health'].includes(cat)
+      const isNeed = needsCategories.has(cat)
       if (isNeed) needs += amt
       else wants += amt
     }
@@ -169,6 +246,18 @@ export default function Dashboard() {
       { name: 'Needs', value: Number(needs.toFixed(2)) },
       { name: 'Wants', value: Number(wants.toFixed(2)) },
     ]
+  }, [purchases, needsCategories])
+
+  const roundUpSavingsTotal = useMemo(() => {
+    let sum = 0
+    for (const p of purchases) {
+      const amt = Number(p.amount || 0)
+      if (amt <= 0) continue
+      const frac = amt - Math.floor(amt)
+      const ru = frac > 0 ? 1 - frac : 0
+      sum += ru
+    }
+    return Number(sum.toFixed(2))
   }, [purchases])
 
   const recentPurchases = useMemo(() => {
@@ -205,14 +294,20 @@ export default function Dashboard() {
 
   return (
     <div className="relative z-10">
-      <div className="px-6 pt-6">
-        <h1 className="text-3xl md:text-4xl font-semibold">Dashboard</h1>
-        {fullName && (
-          <p className="mt-2 text-white/80 text-lg">Welcome, {fullName}</p>
-        )}
-        {customerId && (
-          <p className="mt-1 text-white/60 text-sm">Nessie ID: <span className="font-mono">{customerId}</span></p>
-        )}
+      <div className="px-6 pt-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-semibold">Dashboard</h1>
+          {fullName && (
+            <p className="mt-2 text-white/80 text-lg">Welcome, {fullName}</p>
+          )}
+          {customerId && (
+            <p className="mt-1 text-white/60 text-sm">Nessie ID: <span className="font-mono">{customerId}</span></p>
+          )}
+        </div>
+        <button
+          onClick={() => navigate('/home')}
+          className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium h-9"
+        >Go Home</button>
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-12 gap-6 pt-6 pb-12 px-6">
@@ -368,6 +463,26 @@ export default function Dashboard() {
               </div>
             </GlowingBentoItem>
 
+            <GlowingBentoItem
+              className="md:col-span-5"
+              gradientFrom="from-slate-800/60"
+              gradientTo="to-slate-700/60"
+            >
+              <div className="text-white">
+                <h2 className="text-lg font-semibold mb-1 opacity-80">Round-up Savings</h2>
+                <p className="text-3xl font-bold text-white">{currencyFmt.format(roundUpSavingsTotal)}</p>
+                <p className="text-xs opacity-40 mt-1">Sum of next-dollar round-ups</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    onClick={handleSaveToday}
+                    disabled={savedToday || roundUpSavingsTotal <= 0}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium ${savedToday || roundUpSavingsTotal <= 0 ? 'bg-white/20 text-white/50 cursor-not-allowed' : 'bg-white text-black'}`}
+                  >{savedToday ? 'Saved for Today' : 'Did you save today?'}</button>
+                  <span className="text-xs opacity-60">Total saved: {currencyFmt.format(totalRoundupSaved)}</span>
+                </div>
+              </div>
+            </GlowingBentoItem>
+
             
 
             {rewardsTotal > 0 && (
@@ -430,6 +545,7 @@ const colors = {
   Entertainment: '#14B8A6',
   Bills: '#22D3EE',
   Groceries: '#F59E0B',
+  Wholesale: '#A78BFA',
   Dining: '#10B981',
   Shopping: '#EF4444',
   Utilities: '#6366F1',
