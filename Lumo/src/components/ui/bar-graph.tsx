@@ -37,6 +37,8 @@ export const MonthlyBarGraph = ({ data }) => {
             stroke="#ffffff40"
             tick={{ fill: '#ffffff70', fontSize: 12 }}
             axisLine={{ stroke: '#ffffff20' }}
+            interval={0}
+            tickMargin={8}
           />
           <YAxis 
             stroke="#ffffff40"

@@ -201,8 +201,8 @@ export default function Admin() {
                       const accs = await getCustomerAccounts(String(c._id))
                       ;(Array.isArray(accs)? accs: []).forEach((a:any)=>{
                         const row = document.createElement('div')
-                        row.className = 'flex justify-between gap-2 border-b border-white/10 pb-1 text-sm'
-                        row.innerHTML = `<span class=\"truncate\">${a.nickname||a.type||'Account'}</span><span class=\"text-white/50\">$${Number(a.balance||0).toFixed(2)}</span><span class=\"text-white/40 font-mono text-[10px]\">${a._id||''}</span>`
+                        row.className = 'flex justify-between gap-3 border-b border-white/10 pb-1 text-sm'
+                        row.innerHTML = `<div class=\"min-w-0\"><span class=\"block truncate\">${a.nickname||a.type||'Account'}</span><span class=\"block text-white/40 font-mono text-[10px] break-all\">${a._id||''}</span></div><span class=\"whitespace-nowrap text-white/50\">$${Number(a.balance||0).toFixed(2)}</span>`
                         container?.appendChild(row)
                       })
                     } catch {}

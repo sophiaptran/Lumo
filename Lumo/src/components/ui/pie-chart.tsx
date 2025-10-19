@@ -32,9 +32,10 @@ export const PieCharts = ({ data, colors, title }: PieChartsProps) => {
                 dataKey="value"
                 strokeWidth={0}
               >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[entry.name]} />
-                ))}
+                {data.map((entry, index) => {
+                  const color = colors[entry.name] || `hsl(${(index*37)%360} 85% 60%)`
+                  return <Cell key={`cell-${index}`} fill={color} />
+                })}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
@@ -49,7 +50,7 @@ export const PieCharts = ({ data, colors, title }: PieChartsProps) => {
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: colors[item.name] }}
+                    style={{ backgroundColor: colors[item.name] || `hsl(${(data.findIndex(d=>d.name===item.name)*37)%360} 85% 60%)` }}
                   />
                   <span className="text-sm font-medium">{item.name}</span>
                 </div>
