@@ -312,7 +312,7 @@ const PlanetBadgesPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-6xl font-light text-white tracking-wide mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-6xl font-bold text-white tracking-wide mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             Planet Collection
           </h1>
           <p className="text-lg text-white/60 max-w-2xl mx-auto font-light">
